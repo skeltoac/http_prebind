@@ -1,0 +1,38 @@
+Usefulness:
+This is a sloppy hack to speed up BOSH session initiation for logged-in users. The web server makes a single GET request to start the session and passes the JID, SID, and RID in the HTML for Strophe::attach(). I created http_prebind because a) user passwords are not known because they are stored hashed, and b) the BOSH handshake is too complex. This module allows a predefined system user to create sessions for other users without knowing their passwords. It speeds up the process of getting the authenticated user connected over BOSH. It could be more secure and easier to set up and use but I stopped working on it when it met my needs. I will be happy to see it forked and improved or made obsolete.
+
+
+Installation:
+Customize your auth module so it accepts a backdoor password.
+Edit http_prebind and replace these:
+{"systemuser", "example.com"}
+ - The request from the web server will use Basic Authentication to authenticate as this user. Any other user is unauthorized to use http_prebind.
+backdoor_password
+ - The auth module must accept this password for any user that you wish to be able to use http_prebind.
+example.com
+ - Your service host.
+
+Compile. Copy beam file to /lib/ejabberd/ebin or whatever.
+
+Add this to your ejabberd.cfg in the http_fileserver section:
+	 {["http-prebind"], http_prebind},
+
+Reload the configuration from the debug console:
+ejabberd_config:load_file("/etc/ejabberd/ejabberd.cfg").
+
+
+Sample HTTP request: (username is andy)
+GET /http-prebind/andy HTTP/1.0
+Host: im.wordpress.com
+Authorization: Basic my_precomputed_systemuser_auth
+
+
+Sample HTTP response: (the body is JID\nSID\nRID)
+HTTP/1.0 201 Created
+Connection: close
+Content-Type: text/html; charset=utf-8
+Content-Length: 99
+
+andy@im.wordpress.com/19470701321248704284877554
+938f2ae10569c24367c0822e76e42dd5cd026f71
+461602958
